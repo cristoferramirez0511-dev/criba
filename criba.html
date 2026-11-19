@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Criba · Selecciona solo tus mejores fotos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#e8ebed;--panel:#fff;--ink:#14191c;--mute:#5d6a71;--line:#d3d9dd;--acc:#0e5a64;--acc-ink:#fff;--good:#1d7a4d;--bad:#b3392b;--chip:#f1f3f4}
+@media (prefers-color-scheme:dark){:root{--bg:#171b1e;--panel:#21272b;--ink:#eceff1;--mute:#98a5ac;--line:#343d43;--acc:#5cc3cf;--acc-ink:#0b1c1f;--good:#59c98b;--bad:#f08a7c;--chip:#2b3237}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5;min-height:100vh}
+main{max-width:1120px;margin:0 auto;padding:40px 20px 80px}
+h1{font-size:clamp(2rem,5vw,3.2rem);line-height:1.05;letter-spacing:-.03em;margin:0 0 10px;font-weight:700}
+.lead{color:var(--mute);margin:0 0 28px;max-width:56ch;font-size:1.05rem}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px}
+#drop{display:grid;place-items:center;text-align:center;padding:48px 20px;border:2px dashed var(--line);border-radius:14px;background:var(--panel);transition:border-color .15s,background .15s}
+#drop.over{border-color:var(--acc);background:var(--chip)}
+#drop strong{font-size:1.2rem;display:block;margin-bottom:4px}
+#drop p{margin:0 0 18px;color:var(--mute)}
+.btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+button{font:inherit;font-weight:600;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:10px 18px;cursor:pointer}
+button.pri{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,.card:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+#work{display:none;margin-top:22px}
+.bar{display:flex;gap:24px;align-items:center;flex-wrap:wrap;padding:16px 18px;margin-bottom:18px}
+.bar .grow{flex:1;min-width:220px}
+.bar label{font-weight:600;display:block;margin-bottom:6px}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.scale{display:flex;justify-content:space-between;font-size:.82rem;color:var(--mute)}
+.opt{display:flex;gap:8px;align-items:center;color:var(--mute);font-size:.92rem}
+#prog{height:6px;background:var(--line);border-radius:4px;overflow:hidden;margin-bottom:6px}
+#prog i{display:block;height:100%;width:0;background:var(--acc);transition:width .1s}
+#status{color:var(--mute);font-size:.92rem;margin:0 0 18px;min-height:1.4em}
+.tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.tab{border-radius:999px;padding:8px 16px}
+.tab[aria-selected=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tabs .sp{flex:1}
+.hint{color:var(--mute);font-size:.88rem}
+#grid{--tile:150px;display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--tile),1fr));gap:12px}
+#grid.compact{gap:6px}
+#grid.compact .card{border-radius:8px}
+#grid.compact .meta{display:none}
+#grid.compact .zoom{width:26px;height:26px;top:4px;right:4px;border-radius:7px}
+#grid.compact .zoom svg{width:14px;height:14px}
+.card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.zoom{position:absolute;top:8px;right:8px;width:34px;height:34px;padding:0;display:grid;place-items:center;border-radius:9px;background:rgba(20,25,28,.72);color:#fff;border:0}
+.zoom:hover{background:rgba(20,25,28,.9)}
+#box{position:fixed;inset:0;z-index:50;background:rgba(10,13,15,.96);color:#fff;display:flex;flex-direction:column}
+#box[hidden]{display:none}
+.bhead,.bfoot{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px}
+.bfoot{justify-content:center}
+#box button{background:rgba(255,255,255,.12);color:#fff;border-color:transparent}
+#boxCap{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70vw}
+#box .tag{background:rgba(255,255,255,.14);color:#fff}
+#stage{flex:1;position:relative;min-height:0;display:grid;place-items:center;cursor:pointer}
+#boxImg{max-width:100%;max-height:100%;object-fit:contain;transition:opacity .15s;user-select:none;-webkit-user-drag:none}
+.zone{position:absolute;top:0;bottom:0;width:26%;display:flex;align-items:center;justify-content:center;text-align:center;padding:12px;font-weight:600;pointer-events:none}
+#box[data-tab=good] .zone{right:0;background:linear-gradient(to left,rgba(179,57,43,.55),transparent)}
+#box[data-tab=bad] .zone{left:0;background:linear-gradient(to right,rgba(29,122,77,.6),transparent)}
+#boxToast{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.95);color:#14191c;padding:8px 16px;border-radius:999px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none}
+#boxToast.on{opacity:1}
+.card img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:var(--chip)}
+.card .meta{padding:8px 10px 10px;font-size:.82rem}
+.card .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--mute)}
+.tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.tag{font-size:.74rem;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--chip)}
+.tag.bad{color:var(--bad)}.tag.good{color:var(--good)}
+.empty{grid-column:1/-1;text-align:center;color:var(--mute);padding:50px 0}
+.foot{margin-top:28px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <h1>Criba</h1>
+  <p class="lead">Sube todas las fotos de tu sesión. Criba descarta las desenfocadas, movidas, sobreexpuestas y quemadas, y te deja solo las buenas en una carpeta.</p>
+
+  <div id="drop">
+    <div>
+      <strong>Arrastra tus fotos aquí</strong>
+      <p>JPG, PNG o WebP. Todo se analiza en tu computador, nada se sube a internet.</p>
+      <div class="btns">
+        <button class="pri" id="bFiles">Elegir fotos</button>
+        <button id="bFolder">Elegir una carpeta</button>
+      </div>
+    </div>
+  </div>
+  <input type="file" id="inFiles" accept="image/*" multiple hidden>
+  <input type="file" id="inFolder" webkitdirectory multiple hidden>
+
+  <section id="work">
+    <div class="panel bar">
+      <div class="grow">
+        <label for="sens">Qué tan exigente es el filtro</label>
+        <input type="range" id="sens" min="0" max="2" step="1" value="1">
+        <div class="scale"><span>Flexible</span><span>Equilibrado</span><span>Estricto</span></div>
+      </div>
+      <label class="opt"><input type="checkbox" id="dark"> Descartar también las muy oscuras</label>
+    </div>
+
+    <div id="prog"><i></i></div>
+    <p id="status"></p>
+
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tGood" aria-selected="true">Buenas (0)</button>
+      <button class="tab" role="tab" id="tBad" aria-selected="false">Descartadas (0)</button>
+      <span class="sp"></span>
+      <span class="hint">Toca la esquinita de la foto para verla en grande.</span>
+    </div>
+    <div id="grid"></div>
+
+    <div class="foot">
+      <button class="pri" id="bSave" disabled>Guardar buenas en una carpeta</button>
+      <button id="bReset">Empezar de nuevo</button>
+      <span id="saveMsg" class="hint"></span>
+    </div>
+  </section>
+</main>
+
+<div id="box" hidden role="dialog" aria-modal="true" aria-label="Foto en grande">
+  <div class="bhead">
+    <div><div id="boxCap"></div><div class="tags" id="boxTags"></div></div>
+    <button id="boxClose" aria-label="Cerrar">Cerrar</button>
+  </div>
+  <div id="stage"><img id="boxImg" alt=""><div class="zone" id="boxZone"></div><div id="boxToast"></div></div>
+  <div class="bfoot"><button id="bPrev">‹ Anterior</button><button id="bNext">Siguiente ›</button></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+// Umbrales por nivel: 0 flexible, 1 equilibrado, 2 estricto
+const LV=[{blur:35,mean:215,blown:.30,motion:.16,dark:35,face:6},{blur:60,mean:205,blown:.18,motion:.24,dark:45,face:10},{blur:85,mean:188,blown:.07,motion:.32,dark:60,face:16}];
+let faceDet=null,faceMode='';
+let items=[],tab='good',busy=false;
+
+const drop=$('#drop');
+$('#bFiles').onclick=()=>$('#inFiles').click();
+$('#bFolder').onclick=()=>$('#inFolder').click();
+$('#inFiles').onchange=e=>start([...e.target.files]);
+$('#inFolder').onchange=e=>start([...e.target.files]);
+['dragenter','dragover'].forEach(v=>drop.addEventListener(v,e=>{e.preventDefault();drop.classList.add('over')}));
+['dragleave','drop'].forEach(v=>drop.addEventListener(v,e=>{e.preventDefault();drop.classList.remove('over')}));
+drop.addEventListener('drop',e=>start([...e.dataTransfer.files]));
+$('#sens').oninput=render;$('#dark').onchange=render;
+$('#tGood').onclick=()=>{tab='good';render()};
+$('#tBad').onclick=()=>{tab='bad';render()};
+$('#bReset').onclick=()=>{if(faceMode==='off')faceMode='';items=[];$('#work').style.display='none';$('#drop').style.display='grid';$('#saveMsg').textContent='';['#inFiles','#inFolder'].forEach(s=>$(s).value='')};
+$('#bSave').onclick=save;
+
+async function start(files){
+  files=files.filter(f=>f.type.startsWith('image/')&&/jpe?g|png|webp|gif|bmp|avif/.test(f.type));
+  if(!files.length){alert('No encontré fotos compatibles. Usa JPG, PNG o WebP.');return}
+  drop.style.display='none';$('#work').style.display='block';busy=true;$('#bSave').disabled=true;
+  items=[];render();let fail=0;
+  await initFaces();
+  for(let i=0;i<files.length;i++){
+    $('#status').textContent='Analizando '+(i+1)+' de '+files.length+'…';
+    $('#prog i').style.width=((i/files.length)*100)+'%';
+    try{const r=await analyze(files[i]);items.push({file:files[i],manual:null,...r})}catch(e){fail++}
+    if(i%4===0||i===files.length-1)render();
+    await new Promise(r=>setTimeout(r,0));
+  }
+  busy=false;$('#prog i').style.width='100%';
+  $('#status').textContent='Listo. Analicé '+items.length+' fotos'+(fail?' ('+fail+' no se pudieron leer).':'.')+(faceMode==='off'?' No pude cargar el detector de rostros (necesita internet la primera vez); sin él, una foto con fondo borroso puede salir descartada.':'');
+  render();
+}
+
+async function initFaces(){
+  if(faceMode)return;
+  $('#status').textContent='Preparando el detector de rostros…';
+  try{
+    if('FaceDetector' in window){
+      const fd=new FaceDetector({fastMode:true,maxDetectedFaces:12}),t=document.createElement('canvas');t.width=t.height=16;await fd.detect(t);
+      faceDet=async c=>(await fd.detect(c)).map(f=>({x:f.boundingBox.x,y:f.boundingBox.y,width:f.boundingBox.width,height:f.boundingBox.height}));
+      faceMode='on';return;
+    }
+  }catch(e){}
+  try{
+    const V='https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+    const init=(async()=>{
+      const {FaceDetector:FD,FilesetResolver:FR}=await import(V+'/vision_bundle.mjs');
+      const fs=await FR.forVisionTasks(V+'/wasm');
+      return FD.createFromOptions(fs,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite'},runningMode:'IMAGE',minDetectionConfidence:.5});
+    })();
+    const det=await Promise.race([init,new Promise((_,j)=>setTimeout(j,20000))]);
+    faceDet=async c=>det.detect(c).detections.map(d=>({x:d.boundingBox.originX,y:d.boundingBox.originY,width:d.boundingBox.width,height:d.boundingBox.height}));
+    faceMode='on';
+  }catch(e){faceMode='off'}
+}
+function gstats(g,w,h,thr){
+  let sm=0,sq=0,cnt=0,strong=0;const E=[0,0,0,0];
+  for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){
+    const p=y*w+x,lap=4*g[p]-g[p-1]-g[p+1]-g[p-w]-g[p+w];
+    sm+=lap;sq+=lap*lap;cnt++;
+    const dx=g[p+1]-g[p-1],dy=g[p+w]-g[p-w];
+    if(dx*dx+dy*dy>thr){const a=g[p+w+1]-g[p-w-1],b=g[p+w-1]-g[p-w+1];E[0]+=dx*dx;E[1]+=dy*dy;E[2]+=a*a/2;E[3]+=b*b/2;strong++}
+  }
+  return{lap:sq/cnt-(sm/cnt)**2,motion:strong>60?Math.min(...E)/Math.max(...E):null};
+}
+// Nitidez de un rostro, medida sobre la foto original y normalizada a 128x128.
+function faceStats(bmp,b,s){
+  const ox=Math.max(0,b.x/s),oy=Math.max(0,b.y/s);
+  const ow=Math.min(bmp.width-ox,b.width/s),oh=Math.min(bmp.height-oy,b.height/s);
+  if(ow<60||oh<60)return null; // rostros muy pequeños o lejanos no cuentan
+  const c=document.createElement('canvas');c.width=c.height=128;
+  const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(bmp,ox,oy,ow,oh,0,0,128,128);
+  const d=x.getImageData(0,0,128,128).data,g=new Float32Array(128*128);
+  for(let i=0;i<g.length;i++)g[i]=.299*d[i*4]+.587*d[i*4+1]+.114*d[i*4+2];
+  return gstats(g,128,128,300);
+}
+
+async function analyze(file){
+  const bmp=await createImageBitmap(file);
+  const s=Math.min(1,800/Math.max(bmp.width,bmp.height));
+  const w=Math.max(8,Math.round(bmp.width*s)),h=Math.max(8,Math.round(bmp.height*s));
+  const c=document.createElement('canvas');c.width=w;c.height=h;
+  const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(bmp,0,0,w,h);
+  const d=x.getImageData(0,0,w,h).data,n=w*h,g=new Float32Array(n);
+  let sum=0,blown=0,crushed=0;
+  for(let i=0;i<n;i++){const l=.299*d[i*4]+.587*d[i*4+1]+.114*d[i*4+2];g[i]=l;sum+=l;if(l>=253)blown++;if(l<=8)crushed++}
+  // Nitidez: varianza del laplaciano por zonas (5x5); se usa una zona nítida, no el promedio,
+  // para no castigar retratos con fondo desenfocado a propósito.
+  const G=5,ts=new Float64Array(G*G),tq=new Float64Array(G*G),tn=new Float64Array(G*G);
+  const E=[0,0,0,0];let strong=0;
+  for(let y=1;y<h-1;y++){for(let xx=1;xx<w-1;xx++){
+    const p=y*w+xx,c0=g[p];
+    const lap=4*c0-g[p-1]-g[p+1]-g[p-w]-g[p+w];
+    const t=Math.min(G-1,(y*G/h)|0)*G+Math.min(G-1,(xx*G/w)|0);
+    ts[t]+=lap;tq[t]+=lap*lap;tn[t]++;
+    const dx=g[p+1]-g[p-1],dy=g[p+w]-g[p-w];
+    if(dx*dx+dy*dy>900){
+      const a=g[p+w+1]-g[p-w-1],b=g[p+w-1]-g[p-w+1];
+      E[0]+=dx*dx;E[1]+=dy*dy;E[2]+=a*a/2;E[3]+=b*b/2;strong++;
+    }
+  }}
+  const vs=[];for(let t=0;t<G*G;t++)if(tn[t]>0)vs.push(tq[t]/tn[t]-(ts[t]/tn[t])**2);
+  vs.sort((a,b)=>a-b);
+  const sharp=vs[Math.floor(vs.length*.85)];
+  // Movimiento: si los bordes fuertes casi no tienen energía en una dirección, hay arrastre.
+  const motion=strong>200?Math.min(...E)/Math.max(...E):null;
+  const tc=document.createElement('canvas'),k=320/Math.max(w,h);
+  tc.width=Math.round(w*k);tc.height=Math.round(h*k);
+  tc.getContext('2d').drawImage(c,0,0,tc.width,tc.height);
+  const url=tc.toDataURL('image/jpeg',.75);
+  let faces=[];
+  if(faceDet){try{faces=(await faceDet(c)).map(b=>faceStats(bmp,b,s)).filter(Boolean)}catch(e){}}
+  bmp.close&&bmp.close();
+  return{url,m:{sharp,motion,faces,mean:sum/n,blown:blown/n,crushed:crushed/n}};
+}
+
+function reasons(m){
+  const T=LV[+$('#sens').value],r=[];
+  const F=m.faces||[];
+  const gb=m.sharp<T.blur,gm=!gb&&m.motion!==null&&m.motion<T.motion&&m.sharp<T.blur*3.5;
+  if(F.length){
+    const ok=F.filter(f=>f.lap>=T.face&&!(f.motion!==null&&f.motion<T.motion*.7&&f.lap<T.face*3)).length;
+    if(ok/F.length>=.5){if(gb||gm)r.note='Rostros nítidos'}
+    else r.push('Rostros desenfocados');
+  }else if(gb)r.push('Desenfocada');
+  else if(gm)r.push('Movida');
+  if(m.blown>T.blown)r.push('Quemada');
+  if(m.mean>T.mean)r.push('Sobreexpuesta');
+  if($('#dark').checked&&(m.mean<T.dark))r.push('Muy oscura');
+  return r;
+}
+const isGood=i=>i.manual?i.manual==='good':i.rs.length===0;
+
+function render(){
+  items.forEach(i=>i.rs=reasons(i.m));
+  const good=items.filter(isGood),bad=items.filter(i=>!isGood(i));
+  $('#tGood').textContent='Buenas ('+good.length+')';
+  $('#tBad').textContent='Descartadas ('+bad.length+')';
+  $('#tGood').setAttribute('aria-selected',tab==='good');
+  $('#tBad').setAttribute('aria-selected',tab==='bad');
+  const list=tab==='good'?good:bad,gr=$('#grid');gr.innerHTML='';
+  const tile=Math.round(Math.max(68,Math.min(150,150-20*Math.log2(Math.max(list.length,1)/12))));
+  gr.style.setProperty('--tile',tile+'px');gr.classList.toggle('compact',tile<100);
+  if(!list.length){const e=document.createElement('div');e.className='empty';e.textContent=busy?'Analizando…':(tab==='good'?'Ninguna foto pasó el filtro. Prueba con un nivel más flexible.':'Ninguna foto fue descartada.');gr.append(e)}
+  for(const it of list){
+    const b=document.createElement('div');b.className='card';b.title=it.file.name+(it.rs.length?' · '+it.rs.join(', '):'');
+    const tags=tab==='bad'&&it.rs.length&&!it.manual?it.rs.map(r=>'<span class="tag bad">'+r+'</span>').join(''):
+      (it.manual?'<span class="tag '+(tab==='good'?'good':'bad')+'">Cambiada por ti</span>':'<span class="tag good">'+(it.rs.note||'Nítida y bien expuesta')+'</span>');
+    b.innerHTML='<img alt="" src="'+it.url+'"><button type="button" class="zoom" aria-label="Ver en grande" title="Ver en grande">'+ZOOM+'</button><div class="meta"><div class="nm"></div><div class="tags">'+tags+'</div></div>';
+    b.querySelector('.nm').textContent=it.file.name;
+    b.querySelector('.zoom').onclick=()=>openBox(it);
+    gr.append(b);
+  }
+  $('#bSave').disabled=busy||!good.length;
+  $('#bSave').textContent='Guardar '+good.length+' buenas en una carpeta';
+}
+
+const ZOOM='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>';
+let boxIdx=-1,boxTok=0,toastT;
+const curList=()=>items.filter(i=>tab==='good'?isGood(i):!isGood(i));
+function openBox(it){boxIdx=curList().indexOf(it);$('#box').hidden=false;$('#box').dataset.tab=tab;document.body.style.overflow='hidden';$('#boxZone').textContent=tab==='good'?'Toca este lado para descartar':'Toca este lado para conservar';showBox()}
+function closeBox(){boxTok++;$('#box').hidden=true;document.body.style.overflow='';boxIdx=-1}
+async function bigUrl(file){
+  const bmp=await createImageBitmap(file),k=Math.min(1,1800/Math.max(bmp.width,bmp.height));
+  const c=document.createElement('canvas');c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);
+  c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);bmp.close&&bmp.close();
+  return c.toDataURL('image/jpeg',.9);
+}
+async function showBox(){
+  const l=curList();if(!l.length){closeBox();return}
+  boxIdx=Math.max(0,Math.min(boxIdx,l.length-1));
+  const it=l[boxIdx],tok=++boxTok,img=$('#boxImg');
+  $('#boxCap').textContent=it.file.name+' ('+(boxIdx+1)+' de '+l.length+')';
+  $('#boxTags').innerHTML=it.rs.length?it.rs.map(r=>'<span class="tag">'+r+'</span>').join(''):'<span class="tag">'+(it.rs.note||'Nítida y bien expuesta')+'</span>';
+  if(!it.big){img.src=it.url;img.style.opacity=.6;try{it.big=await bigUrl(it.file)}catch(e){it.big=it.url}}
+  if(tok!==boxTok)return;img.src=it.big;img.style.opacity=1;
+}
+function toast(t){const e=$('#boxToast');e.textContent=t;e.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>e.classList.remove('on'),1400)}
+function moveTo(it,target){
+  const natural=it.rs.length===0?'good':'bad';
+  it.manual=natural===target?null:target;
+  render();toast(target==='bad'?'Pasada a descartadas':'Pasada a buenas');showBox();
+}
+$('#stage').onclick=e=>{
+  const r=e.currentTarget.getBoundingClientRect(),right=e.clientX>r.left+r.width/2,it=curList()[boxIdx];
+  if(!it)return;
+  if(tab==='good'&&right)moveTo(it,'bad');
+  else if(tab==='bad'&&!right)moveTo(it,'good');
+};
+$('#boxClose').onclick=closeBox;
+$('#bPrev').onclick=()=>{boxIdx--;showBox()};
+$('#bNext').onclick=()=>{boxIdx++;showBox()};
+document.addEventListener('keydown',e=>{
+  if($('#box').hidden)return;
+  if(e.key==='Escape')closeBox();
+  if(e.key==='ArrowLeft'){boxIdx--;showBox()}
+  if(e.key==='ArrowRight'){boxIdx++;showBox()}
+});
+
+async function save(){
+  const good=items.filter(isGood),used=new Set(),named=good.map(i=>{
+    let nm=i.file.name,k=1;while(used.has(nm))nm=(k++)+'_'+i.file.name;used.add(nm);return{name:nm,file:i.file}});
+  const msg=$('#saveMsg');
+  if(window.showDirectoryPicker){
+    try{
+      const dir=await showDirectoryPicker({mode:'readwrite'});
+      const sub=await dir.getDirectoryHandle('Fotos buenas',{create:true});
+      for(let i=0;i<named.length;i++){
+        msg.textContent='Guardando '+(i+1)+' de '+named.length+'…';
+        const fh=await sub.getFileHandle(named[i].name,{create:true}),w=await fh.createWritable();
+        await w.write(named[i].file);await w.close();
+      }
+      msg.textContent='Listo: '+named.length+' fotos guardadas en la carpeta «Fotos buenas».';return;
+    }catch(e){if(e.name==='AbortError')return}
+  }
+  msg.textContent='Preparando el .zip…';
+  const zip=await makeZip(named),a=document.createElement('a');
+  a.href=URL.createObjectURL(zip);a.download='Fotos buenas.zip';document.body.append(a);a.click();a.remove();
+  msg.textContent='Listo: se descargó «Fotos buenas.zip» con '+named.length+' fotos.';
+}
+
+const crcT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function crc(u){let c=-1;for(let i=0;i<u.length;i++)c=crcT[(c^u[i])&255]^(c>>>8);return(c^-1)>>>0}
+async function makeZip(files){
+  const parts=[],cd=[],enc=new TextEncoder();let off=0,cds=0;
+  for(const f of files){
+    const nm=enc.encode('Fotos buenas/'+f.name),data=new Uint8Array(await f.file.arrayBuffer()),cr=crc(data),L=data.length;
+    const h=new DataView(new ArrayBuffer(30));
+    h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint16(12,0x21,true);
+    h.setUint32(14,cr,true);h.setUint32(18,L,true);h.setUint32(22,L,true);h.setUint16(26,nm.length,true);
+    parts.push(h.buffer,nm,data);
+    const c=new DataView(new ArrayBuffer(46));
+    c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);c.setUint16(14,0x21,true);
+    c.setUint32(16,cr,true);c.setUint32(20,L,true);c.setUint32(24,L,true);c.setUint16(28,nm.length,true);c.setUint32(42,off,true);
+    cd.push(c.buffer,nm);off+=30+nm.length+L;cds+=46+nm.length;
+  }
+  const e=new DataView(new ArrayBuffer(22));
+  e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cds,true);e.setUint32(16,off,true);
+  return new Blob([...parts,...cd,e.buffer],{type:'application/zip'});
+}
+</script>
+</body>
+</html>
